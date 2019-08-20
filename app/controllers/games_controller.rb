@@ -1,30 +1,31 @@
-require 'open-uri'
+require "open-uri"
 
 class GamesController < ApplicationController
 
+  VOWELS = %w(A E I O U Y)
+
   def new
-    @letters = ('a'..'z').to_a.sample(10)
+    @letters = Array.new(5) { VOWELS.sample }
+    @letters += Array.new(5) { (('A'..'Z').to_a - VOWELS).sample }
+    @letters.shuffle!
   end
 
   def score
-    answer = params[:user_answer].split("")
-    given_letters = params[:sorted_letters].split("")
+    @letters = params[:letters].to_a.split
+    @word = (params[:word] || "").upcase
+    @included = included?(@word, @letters)
+    @english_word = english_word?(@word)
+  end
 
-    x = []
+  private
 
-    answer.each do |letter|
-      if given_letters.include?(letter)
-        x << letter
-      end
-    end
+  def included?(word, letters)
+    word.chars.all? { |letter| word.count(letter) <= letters.count(letter) }
+  end
 
-    if x.length != answer.length
-      @score = 'You lost'
-    else
-      url = "https://wagon-dictionary.herokuapp.com/#{params[:user_answer]}"
-      word_serialized = open(url).read
-      word = JSON.parse(word_serialized)
-      @score = (word["found"] ? "You won" : "You lost")
-    end
+  def english_word?(word)
+    response = open("https://wagon-dictionary.herokuapp.com/#{word}")
+    json = JSON.parse(response.read)
+    json['found']
   end
 end
